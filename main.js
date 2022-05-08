@@ -2,6 +2,8 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.118/build/three.mod
 
 import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.118.1/examples/jsm/loaders/FBXLoader.js';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.118.1/examples/jsm/loaders/GLTFLoader.js';
+// Flag to on/off to show bounding boxes
+const showBoundingBoxes = false;
 
 
 class BasicCharacterControllerProxy {
@@ -46,8 +48,11 @@ class BasicCharacterController {
 
       this._target = fbx;
       this._params.scene.add(this._target);
-      this._characterBBoxHelper = new THREE.BoxHelper(this._target, 0x00ff00);
-      this._params.scene.add(this._characterBBoxHelper);
+      if (showBoundingBoxes == true)
+      {
+        this._characterBBoxHelper = new THREE.BoxHelper(this._target, 0x00ff00);
+        this._params.scene.add(this._characterBBoxHelper);
+      }
       this._characterBBox = new THREE.Box3();
       this._characterBBox.setFromObject(this._target);
       this._mixer = new THREE.AnimationMixer(this._target);
@@ -66,13 +71,13 @@ class BasicCharacterController {
           action: action,
         };
       };
-
+      // Make sure animations are done in place
       const loader = new FBXLoader(this._manager);
       loader.setPath('./resources/Female Warrior/');
-      loader.load('Catwalk Walk Forward.fbx', (a) => { _OnLoad('walk-forward', a); });
-      loader.load('Standing Walk Back.fbx', (a) => { _OnLoad('walk-backward', a); });
-      loader.load('Standing Run Forward.fbx', (a) => { _OnLoad('run-forward', a); });
-      loader.load('Standing Run Back.fbx', (a) => { _OnLoad('run-backward', a); });
+      loader.load('Catwalk Walk Forward-InPlace.fbx', (a) => { _OnLoad('walk-forward', a); });
+      loader.load('Standing Walk Back-InPlace.fbx', (a) => { _OnLoad('walk-backward', a); });
+      loader.load('Standing Run Forward-InPlace.fbx', (a) => { _OnLoad('run-forward', a); });
+      loader.load('Standing Run Back-InPlace.fbx', (a) => { _OnLoad('run-backward', a); });
       loader.load('Catwalk Idle.fbx', (a) => { _OnLoad('idle', a); });
       
     });
@@ -155,8 +160,10 @@ class BasicCharacterController {
 
     controlObject.position.add(forward);
     controlObject.position.add(sideways);
-
-    this._characterBBoxHelper.update();
+    if (showBoundingBoxes == true)
+    {
+      this._characterBBoxHelper.update();
+    }
     this._characterBBox.setFromObject(controlObject);
 
     
@@ -164,13 +171,22 @@ class BasicCharacterController {
 
     this._position.copy(controlObject.position);
     
-    this._params.scoreText.position.set(this._position.x + 0, this._position.y + 45, this._position.z + 50);
+    this._UpdateScorePosition(controlObject);
 
     if (this._mixer) {
       this._mixer.update(timeInSeconds);
     }
   }
-  
+ // Update score position
+  _UpdateScorePosition(characterController)
+  {
+    const idealScorePosition = new THREE.Vector3(0,30,10);
+    idealScorePosition.applyQuaternion(characterController.quaternion);
+    idealScorePosition.add(characterController.position);
+    // Apply to Score Text
+    this._params.scoreText.position.set(idealScorePosition.x, idealScorePosition.y, idealScorePosition.z);
+    this._params.scoreText.quaternion.copy(characterController.quaternion);
+  }
   /**
  * Collision detection for every solid object.
  */
@@ -197,7 +213,7 @@ class BasicCharacterController {
           var objectCenter = new THREE.Vector3();
           var playerCenter = new THREE.Vector3();
           objectBoundingBox.getCenter(objectCenter);
-          objectBoundingBox.getCenter(playerCenter);
+          this._characterBBox.getCenter(playerCenter);
           // Move the object in the clear. Detect the best direction to move.
           if ( this._characterBBox.min.x <= objectBoundingBox.max.x && this._characterBBox.max.x >= objectBoundingBox.min.x ) 
           {
@@ -737,7 +753,7 @@ class ThirdPersonCameraDemo {
     this._CreateTree(800, -300, 50);
     this._CreateTree(-300, 800, 50);
     this._CreateTree(-800, -800, 50);
-    //this._CreateRock(100, 100, 25);
+    this._CreateRock(200, 200, 25);
     this._CreateCoin(0, 20);
     
     var numberOfClusters = Math.floor(Math.random() *  this._MaximumNumberOfClusters);
@@ -985,7 +1001,10 @@ class ThirdPersonCameraDemo {
   });
   var outlineTreeTop = new THREE.Mesh(outline_geo, outline_mat);
   treeTop.add( outlineTreeTop );
-  this._scene.add(new THREE.BoxHelper(trunk, 0x0000ff));
+  if(showBoundingBoxes == true)
+  {
+    this._scene.add(new THREE.BoxHelper(trunk, 0x0000ff));
+  }
   this._calculateCollisionPoints( trunk );
 }
  
@@ -1002,7 +1021,10 @@ _CreateCoin(posX, posZ)
 
       fbx.position.set(posX, 10, posZ)
       this._scene.add(fbx);
-      this._scene.add(new THREE.BoxHelper(fbx, 0xff00ff));
+      if(showBoundingBoxes == true)
+      {
+        this._scene.add(new THREE.BoxHelper(fbx, 0xff00ff));
+      }
       this._calculateCollisionPoints( fbx, 'reward' ) 
      
     });
@@ -1058,7 +1080,10 @@ _CreateCoin(posX, posZ)
     });
     var outlineRock = new THREE.Mesh(outline_geo, outline_mat);
     rock.add( outlineRock );
-    this._scene.add(new THREE.BoxHelper(rock, 0xff0000));
+    if(showBoundingBoxes == true)
+    {
+      this._scene.add(new THREE.BoxHelper(rock, 0xff0000));
+    }
     this._calculateCollisionPoints( rock );
 
   }
